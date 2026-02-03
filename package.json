@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "postinstall": "node patch-rn-fetch-blob.js"
+    "postinstall": "node patch-rn-fetch-blob.js && node scripts/generate-env.js",
+    "generate-env": "node scripts/generate-env.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
