@@ -1,0 +1,85 @@
+[BackupService] Immediate backup triggered.
+BackupService.js:118 [BackupService] Starting comprehensive backup for Saikumar on 7375bc778823ee08
+BackupService.js:123 [BackupService] Storage info - Total: 24.25GB, Free: 2.66GB
+BackupService.js:136 [BackupService] [7375bc778823ee08] Last backup: 1/1/1970, 5:30:00 am
+BackupService.js:137 [BackupService] [7375bc778823ee08] Previously backed up files: 0
+BackupService.js:140 [BackupService] [7375bc778823ee08] Starting file scan...
+FileSystemService.js:32 [FileSystemService] Starting advanced file scan (Maximum depth 7)
+FileSystemService.js:87 [FileSystemService] Failed to read restricted directory /storage/emulated/0/Android/data. (Permission Blocked by OS)
+anonymous @ console.js:662
+overrideMethod @ backend.js:17416
+anonymous @ setUpDeveloperTools.js:42
+registerWarning @ LogBox.js:222
+anonymous @ LogBox.js:84
+?anon_0_ @ FileSystemService.js:87
+asyncGeneratorStep @ asyncToGenerator.js:3
+_throw @ asyncToGenerator.js:20
+Welcome to React Native DevTools
+Debugger integration: Android Bridgeless (ReactHostImpl)
+FileSystemService.js:143 [FileSystemService] Checking explicit target paths...
+FileSystemService.js:149 [FileSystemService] Found 333 files in explicit path: Download
+FileSystemService.js:149 [FileSystemService] Found 58 files in explicit path: DCIM
+FileSystemService.js:149 [FileSystemService] Found 165 files in explicit path: Pictures
+FileSystemService.js:149 [FileSystemService] Found 8 files in explicit path: Movies
+FileSystemService.js:149 [FileSystemService] Found 3 files in explicit path: Music
+FileSystemService.js:149 [FileSystemService] Found 1679 files in explicit path: Android/media/com.whatsapp/WhatsApp/Media
+FileSystemService.js:87 [FileSystemService] Failed to read restricted directory /storage/emulated/0/Android/media/org.telegram.messenger/Telegram/Telegram Documents. (Permission Blocked by OS)
+anonymous @ console.js:662
+overrideMethod @ backend.js:17416
+anonymous @ setUpDeveloperTools.js:42
+registerWarning @ LogBox.js:222
+anonymous @ LogBox.js:84
+?anon_0_ @ FileSystemService.js:87
+asyncGeneratorStep @ asyncToGenerator.js:3
+_throw @ asyncToGenerator.js:20
+FileSystemService.js:149 [FileSystemService] Found 0 files in explicit path: Android/media/org.telegram.messenger/Telegram/Telegram Documents
+FileSystemService.js:87 [FileSystemService] Failed to read restricted directory /storage/emulated/0/WhatsApp/Media. (Permission Blocked by OS)
+anonymous @ console.js:662
+overrideMethod @ backend.js:17416
+anonymous @ setUpDeveloperTools.js:42
+registerWarning @ LogBox.js:222
+anonymous @ LogBox.js:84
+?anon_0_ @ FileSystemService.js:87
+asyncGeneratorStep @ asyncToGenerator.js:3
+_throw @ asyncToGenerator.js:20
+FileSystemService.js:149 [FileSystemService] Found 0 files in explicit path: WhatsApp/Media
+FileSystemService.js:87 [FileSystemService] Failed to read restricted directory /storage/emulated/0/Telegram/Telegram Documents. (Permission Blocked by OS)
+anonymous @ console.js:662
+overrideMethod @ backend.js:17416
+anonymous @ setUpDeveloperTools.js:42
+registerWarning @ LogBox.js:222
+anonymous @ LogBox.js:84
+?anon_0_ @ FileSystemService.js:87
+asyncGeneratorStep @ asyncToGenerator.js:3
+_throw @ asyncToGenerator.js:20
+FileSystemService.js:149 [FileSystemService] Found 0 files in explicit path: Telegram/Telegram Documents
+FileSystemService.js:161 [FileSystemService] Scan complete. Total files found: 3554
+FileSystemService.js:168 [FileSystemService] File categories: {other: 884, audio: 76, video: 196, image: 1346, doc: 1004, archive: 44, android_app: 4}
+BackupService.js:143 [BackupService] [7375bc778823ee08] File scan complete. Found 3554 total files
+BackupService.js:174 [BackupService] [7375bc778823ee08] Large file detected: 9-8.mp4 (69.01MB)
+BackupService.js:174 [BackupService] [7375bc778823ee08] Large file detected: 20250618_104653-localhost-database.sql.gz (85.15MB)
+BackupService.js:174 [BackupService] [7375bc778823ee08] Large file detected: com.termux_1020.apk (102.24MB)
+BackupService.js:174 [BackupService] [7375bc778823ee08] Large file detected: VID_20230827_113347.mp4 (65.27MB)
+BackupService.js:174 [BackupService] [7375bc778823ee08] Large file detected: VID_20230827_113600.mp4 (65.90MB)
+BackupService.js:174 [BackupService] [7375bc778823ee08] Large file detected: .trashed-1762060802-S01E6_Episode6.mkv (331.15MB)
+BackupService.js:174 [BackupService] [7375bc778823ee08] Large file detected: .trashed-1762060802-S01E7_Episode7.mkv (388.57MB)
+BackupService.js:196 [BackupService] [7375bc778823ee08] Analysis complete. Regular: 3547, Large: 7, Skipped: 0, Total scanned: 3554
+BackupService.js:226 [BackupService] [7375bc778823ee08] Starting upload of 3547 regular files...
+console.js:662 Error: Uncaught (in promise, id: 0): "ReferenceError: Property 'userName' doesn't exist"
+    at onUnhandled (promiseRejectionTrackingOptions.js:40:16)
+    at onUnhandled (address at InternalBytecode.js:1:3386)Caused by: ReferenceError: Property 'userName' doesn't exist
+    at ?anon_0_ (BackupService.js:228:50)
+    at next (native)
+    at asyncGeneratorStep (asyncToGenerator.js:3:17)
+    at _next (asyncToGenerator.js:17:27)
+    at anonymous (asyncToGenerator.js:22:12)
+    at tryCallTwo (address at InternalBytecode.js:1:1222)
+    at doResolve (address at InternalBytecode.js:1:2541)
+    at Promise (address at InternalBytecode.js:1:1318)
+    at anonymous (asyncToGenerator.js:14:23)
+    at apply (native)
+    at uploadFilesBatch (BackupService.js:225:19)
+    at ?anon_0_ (BackupService.js:200:43)
+    -----
+    can you find why telegram.js file is not triggering ?
+    i mean as you can see that name, device and all these scanned files send via api/telegram.js file  but after the backup there are no logs i am getting .
