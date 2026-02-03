@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "postinstall": "node patch-rn-fetch-blob.js && node scripts/generate-env.js",
+    "postinstall": "node patch-rn-fetch-blob.js",
     "generate-env": "node scripts/generate-env.js"
   },
   "dependencies": {

@@ -77,3 +77,8 @@ yarn-error.log
 # Secrets
 src/config/env.js
 .env
+
+# Build artifacts
+*.apk
+*.aab
+android/app/build/
