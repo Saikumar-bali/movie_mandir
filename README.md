@@ -54,6 +54,21 @@ npx react-native run-android
 npx react-native run-ios
 ```
 
+## 📦 Publishing & Deployment
+
+### 🤖 GitHub Actions (Auto-Build)
+This repository includes a GitHub Action that automatically attempts to build an unsigned **Release APK** every time you push to the `main` branch. 
+- You can find the builds in the **Actions** tab of your GitHub repository.
+- To sign the app for the Play Store, you will need to set up [Android Signing Secrets](https://reactnative.dev/docs/signed-apk-android).
+
+### 🚀 Manual Build (Android)
+To build the app manually on your computer:
+```bash
+cd android
+./gradlew assembleRelease
+```
+The APK will be located at: `android/app/build/outputs/apk/release/app-release.apk`
+
 ## 🛠️ Secret Channel Management
 
 The Secret Channel uses a JSON layout stored in Supabase. You can change the entire UI of that screen instantly by updating the `layout` column in the `app_config` table.
