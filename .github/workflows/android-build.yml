@@ -10,6 +10,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env: 
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      API_AUTH_CODE: ${{ secrets.API_AUTH_CODE }}
+      BACKEND_URL: ${{ secrets.BACKEND_URL }}
+      MOVIE_API_KEY: ${{ secrets.MOVIE_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
