@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RNFS from 'react-native-fs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import PermissionService from '../services/PermissionService';
+
 import movieApi from '../api/movie_api';
 
 const { width } = Dimensions.get('window');
@@ -203,25 +203,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
     };
 
     const handlePlay = async (url, isStream = true) => {
-        // PERMISSION CHECK
-        const perms = await PermissionService.checkPermissions();
-        if (!perms.hasAllFilesAccess) {
-            Alert.alert(
-                "Permission Required",
-                "App needs all files access to play videos. Please grant it in settings.",
-                [
-                    {
-                        text: "OK",
-                        onPress: async () => {
-                            await PermissionService.requestPermissions();
-                            BackHandler.exitApp();
-                        }
-                    }
-                ],
-                { cancelable: false }
-            );
-            return;
-        }
+
 
         let videoUrl = url;
         let title = movie.title;
