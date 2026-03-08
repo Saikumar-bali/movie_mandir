@@ -1,4 +1,4 @@
-import { Linking, Platform, Alert } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 /**
  * External Player Configuration
