@@ -19,6 +19,9 @@ import RNFS from 'react-native-fs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import movieApi from '../api/movie_api';
 import { buildMovieBlastPlaybackRequest, getMovieBlastLocalPathKey, getUnsupportedPlaybackMode } from '../services/MovieBlastPlayback';
+import PlayerSelectionDialog from '../components/PlayerSelectionDialog';
+import { handlePlayerLaunch } from '../services/ExternalPlayerService';
+import { getPlayerSelectionConfig } from '../services/PlayerPreferences';
 
 const { width } = Dimensions.get('window');
 
@@ -27,11 +30,26 @@ const MovieDetailScreen = ({ route, navigation }) => {
     const [movie, setMovie] = useState(route.params.movie);
     const [loading, setLoading] = useState(false);
     const [downloadStatus, setDownloadStatus] = useState({}); // { url: { isDownloaded: bool, progress: number } }
+    
+    // Player selection state
+    const [showPlayerDialog, setShowPlayerDialog] = useState(false);
+    const [selectedSource, setSelectedSource] = useState(null);
+    const [playerConfig, setPlayerConfig] = useState(null);
 
     useEffect(() => {
         loadFullDetails();
         checkDownloads();
+        loadPlayerPreferences();
     }, []);
+
+    const loadPlayerPreferences = async () => {
+        try {
+            const config = await getPlayerSelectionConfig();
+            setPlayerConfig(config);
+        } catch (error) {
+            console.error('Error loading player preferences:', error);
+        }
+    };
 
     const loadFullDetails = async () => {
         // If we don't have video links, we need to fetch them
@@ -221,27 +239,97 @@ const MovieDetailScreen = ({ route, navigation }) => {
             return;
         }
 
-        const playback = await buildMovieBlastPlaybackRequest(source);
-        let videoUrl = playback.url;
-        let title = movie.title;
+        // Check if we should use default player directly
+        if (playerConfig?.shouldUseDefault && playerConfig?.defaultPlayer) {
+            // Use default player directly
+            await launchPlayer(playerConfig.defaultPlayer, source);
+        } else {
+            // Show player selection dialog
+            setSelectedSource(source);
+            setShowPlayerDialog(true);
+        }
+    };
 
-        // Check for local file first
-        const localPath = getLocalPath(source?.link);
-        const exists = await RNFS.exists(localPath);
+    const launchPlayer = async (playerId, source) => {
+        try {
+            const playback = await buildMovieBlastPlaybackRequest(source);
+            let videoUrl = playback.url;
+            let title = movie.title;
 
-        if (exists) {
-            videoUrl = localPath; // Play local file
-            title += " (Offline)";
+            // Check for local file first
+            const localPath = getLocalPath(source?.link);
+            const exists = await RNFS.exists(localPath);
+
+            if (exists) {
+                videoUrl = localPath;
+                title += " (Offline)";
+            }
+
+            // Handle external player launch
+            if (playerId !== 'builtin') {
+                const result = await handlePlayerLaunch(
+                    playerId,
+                    videoUrl,
+                    title,
+                    exists ? undefined : playback.headers,
+                    (player) => {
+                        // Player not installed callback
+                        Alert.alert(
+                            'Player Not Installed',
+                            `${player.name} is not installed. Would you like to install it?`,
+                            [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Install', onPress: () => handleInstallPlayer(player) }
+                            ]
+                        );
+                    }
+                );
+
+                if (result.success && result.useExternal) {
+                    return; // External player launched
+                }
+
+                if (result.notInstalled) {
+                    return; // Handled in callback
+                }
+            }
+
+            // Navigate to built-in player
+            navigation.navigate('Player', {
+                videoUrl,
+                videoHeaders: exists ? undefined : playback.headers,
+                title,
+                spokenLanguages: movie.spoken_languages || [],
+                subtitles: movie.substitles || [],
+                movieData: movie
+            });
+        } catch (error) {
+            console.error('Error launching player:', error);
+            Alert.alert('Error', 'Failed to launch player.');
+        }
+    };
+
+    const handleInstallPlayer = async (player) => {
+        try {
+            const { installPlayer } = await import('../services/ExternalPlayerService');
+            await installPlayer(player.id);
+        } catch (error) {
+            console.error('Error installing player:', error);
+        }
+    };
+
+    const handlePlayerSelect = async (player) => {
+        if (!selectedSource) return;
+
+        if (player.isExternal && !player.available) {
+            // Player not installed, offer to install
+            handleInstallPlayer(player);
+            setShowPlayerDialog(false);
+            return;
         }
 
-        navigation.navigate('Player', {
-            videoUrl,
-            videoHeaders: exists ? undefined : playback.headers,
-            title,
-            spokenLanguages: movie.spoken_languages || [],
-            subtitles: movie.substitles || [],
-            movieData: movie
-        });
+        await launchPlayer(player.id, selectedSource);
+        setShowPlayerDialog(false);
     };
 
     const videoSources = [
@@ -343,6 +431,17 @@ const MovieDetailScreen = ({ route, navigation }) => {
                     )}
                 </View>
             </ScrollView>
+
+            {/* Player Selection Dialog */}
+            <PlayerSelectionDialog
+                visible={showPlayerDialog}
+                onClose={() => {
+                    setShowPlayerDialog(false);
+                    setSelectedSource(null);
+                }}
+                onSelect={handlePlayerSelect}
+                videoTitle={movie?.title}
+            />
         </SafeAreaView>
     );
 };

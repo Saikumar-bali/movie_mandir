@@ -20,6 +20,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BackHandler } from 'react-native';
 import movieApi from '../api/movie_api';
 import { buildMovieBlastPlaybackRequest, getMovieBlastLocalPathKey, getUnsupportedPlaybackMode } from '../services/MovieBlastPlayback';
+import PlayerSelectionDialog from '../components/PlayerSelectionDialog';
+import { handlePlayerLaunch } from '../services/ExternalPlayerService';
+import { getPlayerSelectionConfig } from '../services/PlayerPreferences';
 
 const { width } = Dimensions.get('window');
 
@@ -32,12 +35,27 @@ const SeriesDetailScreen = ({ route, navigation }) => {
   const [downloadStatus, setDownloadStatus] = useState({});
   const [watchProgress, setWatchProgress] = useState({});
   const [downloadingEpisodes, setDownloadingEpisodes] = useState({});
+  
+  // Player selection state
+  const [showPlayerDialog, setShowPlayerDialog] = useState(false);
+  const [selectedEpisode, setSelectedEpisode] = useState(null);
+  const [playerConfig, setPlayerConfig] = useState(null);
 
   useEffect(() => {
     loadFullDetails();
     checkDownloads();
     loadWatchProgress();
+    loadPlayerPreferences();
   }, []);
+
+  const loadPlayerPreferences = async () => {
+    try {
+      const config = await getPlayerSelectionConfig();
+      setPlayerConfig(config);
+    } catch (error) {
+      console.error('Error loading player preferences:', error);
+    }
+  };
 
   const loadFullDetails = async () => {
     // If we don't have seasons or they are empty, we likely need to fetch details
@@ -293,30 +311,100 @@ const SeriesDetailScreen = ({ route, navigation }) => {
       return;
     }
 
-    const playback = await buildMovieBlastPlaybackRequest(source);
-    let videoUrl = playback.url;
-    let title = `${series.name} - ${episode.name}`;
+    // Check if we should use default player directly
+    if (playerConfig?.shouldUseDefault && playerConfig?.defaultPlayer) {
+      await launchPlayer(playerConfig.defaultPlayer, episode, source);
+    } else {
+      // Show player selection dialog
+      setSelectedEpisode({ episode, source });
+      setShowPlayerDialog(true);
+    }
+  };
 
-    // Check for local file first
-    const localPath = getLocalPath(source.link);
-    const exists = await RNFS.exists(localPath);
+  const launchPlayer = async (playerId, episode, source) => {
+    try {
+      const playback = await buildMovieBlastPlaybackRequest(source);
+      let videoUrl = playback.url;
+      let title = `${series.name} - ${episode.name}`;
 
-    if (exists) {
-      videoUrl = localPath; // Play local file
-      title += " (Offline)";
+      // Check for local file first
+      const localPath = getLocalPath(source.link);
+      const exists = await RNFS.exists(localPath);
+
+      if (exists) {
+        videoUrl = localPath;
+        title += " (Offline)";
+      }
+
+      // Handle external player launch
+      if (playerId !== 'builtin') {
+        const result = await handlePlayerLaunch(
+          playerId,
+          videoUrl,
+          title,
+          exists ? undefined : playback.headers,
+          (player) => {
+            Alert.alert(
+              'Player Not Installed',
+              `${player.name} is not installed. Would you like to install it?`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Install', onPress: () => handleInstallPlayer(player) }
+              ]
+            );
+          }
+        );
+
+        if (result.success && result.useExternal) {
+          saveWatchProgress(episode.id);
+          return;
+        }
+
+        if (result.notInstalled) {
+          return;
+        }
+      }
+
+      // Navigate to built-in player
+      navigation.navigate('Player', {
+        videoUrl,
+        videoHeaders: exists ? undefined : playback.headers,
+        title,
+        spokenLanguages: series.spoken_languages || [],
+        subtitles: episode.substitles || [],
+        movieData: { ...series, episode }
+      });
+
+      // Mark as watched
+      saveWatchProgress(episode.id);
+    } catch (error) {
+      console.error('Error launching player:', error);
+      Alert.alert('Error', 'Failed to launch player.');
+    }
+  };
+
+  const handleInstallPlayer = async (player) => {
+    try {
+      const { installPlayer } = await import('../services/ExternalPlayerService');
+      await installPlayer(player.id);
+    } catch (error) {
+      console.error('Error installing player:', error);
+    }
+  };
+
+  const handlePlayerSelect = async (player) => {
+    if (!selectedEpisode) return;
+
+    if (player.isExternal && !player.available) {
+      handleInstallPlayer(player);
+      setShowPlayerDialog(false);
+      setSelectedEpisode(null);
+      return;
     }
 
-    navigation.navigate('Player', {
-      videoUrl,
-      videoHeaders: exists ? undefined : playback.headers,
-      title,
-      spokenLanguages: series.spoken_languages || [],
-      subtitles: episode.substitles || [],
-      movieData: { ...series, episode }
-    });
-
-    // Mark as watched
-    saveWatchProgress(episode.id);
+    await launchPlayer(player.id, selectedEpisode.episode, selectedEpisode.source);
+    setShowPlayerDialog(false);
+    setSelectedEpisode(null);
   };
 
   const renderSeasonItem = ({ item: season, index }) => {
@@ -474,6 +562,17 @@ const SeriesDetailScreen = ({ route, navigation }) => {
           </View>
         )}
       </View>
+
+      {/* Player Selection Dialog */}
+      <PlayerSelectionDialog
+        visible={showPlayerDialog}
+        onClose={() => {
+          setShowPlayerDialog(false);
+          setSelectedEpisode(null);
+        }}
+        onSelect={handlePlayerSelect}
+        videoTitle={series?.name}
+      />
     </SafeAreaView>
   );
 };
