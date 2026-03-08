@@ -1,0 +1,21 @@
+pluginManagement { 
+  includeBuild("../node_modules/@react-native/gradle-plugin") 
+}
+plugins { 
+  id("com.facebook.react.settings") 
+}
+extensions.configure(com.facebook.react.ReactSettingsExtension){ 
+  ex -> ex.autolinkLibrariesFromCommand() 
+}
+rootProject.name = 'mememandir'
+include ':app'
+includeBuild('../node_modules/@react-native/gradle-plugin')
+
+// --- FIX: Manually including react-native-permissions to resolve 'RNPermissions' not found ---
+include ':react-native-permissions'
+project(':react-native-permissions').projectDir = new File('../node_modules/react-native-permissions/android')
+
+// --- ADD: Manually including react-native-svg to resolve 'RNSVGPath' not found ---
+include ':react-native-svg'
+project(':react-native-svg').projectDir = new File('../node_modules/react-native-svg/android')
+// ------------------------------------------------------------------------------------------
