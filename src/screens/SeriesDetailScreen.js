@@ -395,13 +395,6 @@ const SeriesDetailScreen = ({ route, navigation }) => {
   const handlePlayerSelect = async (player) => {
     if (!selectedEpisode) return;
 
-    if (player.isExternal && !player.available) {
-      handleInstallPlayer(player);
-      setShowPlayerDialog(false);
-      setSelectedEpisode(null);
-      return;
-    }
-
     await launchPlayer(player.id, selectedEpisode.episode, selectedEpisode.source);
     setShowPlayerDialog(false);
     setSelectedEpisode(null);

@@ -75,12 +75,6 @@ const PlayerSelectionDialog = ({
   };
 
   const handlePlayerSelect = async (player) => {
-    if (!player.available && player.isExternal) {
-      // Player not installed, offer to install
-      await handleInstallPlayer(player);
-      return;
-    }
-
     // Save preference if user chose to remember
     if (rememberChoice) {
       await setDefaultPlayer(player.id);
@@ -112,8 +106,7 @@ const PlayerSelectionDialog = ({
 
   const renderPlayerItem = (player) => {
     const isDefault = defaultPlayer === player.id;
-    const isInstalled = player.available;
-    const isBuiltin = !player.isExternal;
+    const isExternal = player.isExternal;
 
     return (
       <TouchableOpacity
@@ -121,10 +114,8 @@ const PlayerSelectionDialog = ({
         style={[
           styles.playerItem,
           isDefault && styles.defaultPlayerItem,
-          !isInstalled && !isBuiltin && styles.uninstalledItem,
         ]}
         onPress={() => handlePlayerSelect(player)}
-        disabled={!isInstalled && !isBuiltin}
         activeOpacity={0.7}
       >
         <View style={[styles.playerIconContainer, { backgroundColor: player.color + '20' }]}>
@@ -145,11 +136,6 @@ const PlayerSelectionDialog = ({
           <Text style={styles.playerDescription}>
             {player.description}
           </Text>
-          {!isInstalled && !isBuiltin && (
-            <Text style={styles.notInstalledText}>
-              Not installed
-            </Text>
-          )}
           {isDefault && (
             <Text style={styles.defaultBadge}>
               Default
@@ -158,21 +144,11 @@ const PlayerSelectionDialog = ({
         </View>
 
         <View style={styles.playerAction}>
-          {!isInstalled && !isBuiltin ? (
-            <TouchableOpacity
-              style={styles.installButton}
-              onPress={() => handleInstallPlayer(player)}
-            >
-              <Icon name="download" size={20} color="#ff375f" />
-              <Text style={styles.installButtonText}>Install</Text>
-            </TouchableOpacity>
-          ) : (
-            <Icon
-              name={isDefault ? 'check-circle' : 'chevron-right'}
-              size={24}
-              color={isDefault ? '#00b894' : '#888'}
-            />
-          )}
+          <Icon
+            name={isDefault ? 'check-circle' : 'chevron-right'}
+            size={24}
+            color={isDefault ? '#00b894' : '#888'}
+          />
         </View>
       </TouchableOpacity>
     );

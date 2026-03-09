@@ -321,13 +321,6 @@ const MovieDetailScreen = ({ route, navigation }) => {
     const handlePlayerSelect = async (player) => {
         if (!selectedSource) return;
 
-        if (player.isExternal && !player.available) {
-            // Player not installed, offer to install
-            handleInstallPlayer(player);
-            setShowPlayerDialog(false);
-            return;
-        }
-
         await launchPlayer(player.id, selectedSource);
         setShowPlayerDialog(false);
     };
