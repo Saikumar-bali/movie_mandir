@@ -71,120 +71,99 @@ export async function isAppInstalled(packageName) {
 }
 
 /**
- * Generate VLC-specific URL with optional parameters
- * VLC supports various parameters for playback control
- * Headers can be passed via URL parameters
+ * Generate VLC-specific URL
+ * User requested to use vlc:// scheme specifically.
  */
 function generateVLCUrl(videoUrl, title = '', headers = {}) {
-  // VLC URL format: vlc://<url>
-  // Headers can be passed as query parameters
-  let urlWithHeaders = videoUrl;
-
-  // Append headers as query parameters
-  const headerParams = [];
-  if (headers.Referer) {
-    headerParams.push(`referer=${encodeURIComponent(headers.Referer)}`);
-  }
-  if (headers['User-Agent']) {
-    headerParams.push(
-      `http-user-agent=${encodeURIComponent(headers['User-Agent'])}`,
-    );
-  }
-  if (headers['X-PlayToken'] || headers['x-playtoken']) {
-    headerParams.push(
-      `token=${encodeURIComponent(
-        headers['X-PlayToken'] || headers['x-playtoken'],
-      )}`,
-    );
-  }
-
-  // Add custom headers if any
-  Object.keys(headers).forEach(key => {
-    if (
-      ![
-        'Referer',
-        'User-Agent',
-        'X-PlayToken',
-        'x-playtoken',
-        'Authorization',
-      ].includes(key)
-    ) {
-      headerParams.push(
-        `${encodeURIComponent(key)}=${encodeURIComponent(headers[key])}`,
-      );
-    }
-  });
-
-  if (headerParams.length > 0) {
-    const separator = videoUrl.includes('?') ? '&' : '?';
-    urlWithHeaders = videoUrl + separator + headerParams.join('&');
-  }
-
-  const encodedUrl = encodeURIComponent(urlWithHeaders);
-  return `vlc://${encodedUrl}`;
+  // VLC Android can take the URL directly after vlc://
+  // For vlc:// scheme, we should NOT encode the http:// part
+  // vlc://http://example.com/video.mp4
+  const finalUrl = `vlc://${videoUrl}`;
+  console.log(`[ExternalPlayer] Final VLC URL: ${finalUrl}`);
+  return finalUrl;
 }
 
 /**
  * Generate MX Player intent URL
- * MX Player uses Android intents for external playback
- * Headers can be passed via intent extras
  */
 function generateMXPlayerUrl(videoUrl, title = '', headers = {}) {
-  // MX Player intent format with headers support
-  const encodedUrl = encodeURIComponent(videoUrl);
-
-  let intentExtras = '';
-
-  // Add Referer as extra
-  if (headers.Referer) {
-    intentExtras += `;com.mxtech.intent.extra.REFERER=${encodeURIComponent(
-      headers.Referer,
-    )}`;
+  // Standard Android Intent URI format: 
+  // intent://URL_WITHOUT_SCHEME#Intent;scheme=ORIGINAL_SCHEME;action=android.intent.action.VIEW;package=com.mxtech.videoplayer.ad;S.title=TITLE;end
+  
+  let scheme = 'http';
+  let rest = videoUrl;
+  
+  if (videoUrl.includes('://')) {
+    const parts = videoUrl.split('://');
+    scheme = parts[0];
+    rest = parts[1];
+  } else if (videoUrl.startsWith('/')) {
+    scheme = 'file';
+    rest = videoUrl;
   }
 
-  // Add User-Agent as extra
-  if (headers['User-Agent']) {
-    intentExtras += `;com.mxtech.intent.extra.USER_AGENT=${encodeURIComponent(
-      headers['User-Agent'],
-    )}`;
+  // Ensure rest doesn't start with // if we are prepending //
+  const normalizedRest = rest.startsWith('//') ? rest.substring(2) : rest;
+  let intent = `intent://${normalizedRest}#Intent;scheme=${scheme};action=android.intent.action.VIEW;package=com.mxtech.videoplayer.ad`;
+  
+  if (title) {
+    intent += `;S.title=${encodeURIComponent(title)}`;
   }
 
-  // Add any custom headers
-  if (headers['X-PlayToken'] || headers['x-playtoken']) {
-    intentExtras += `;X-PlayToken=${encodeURIComponent(
-      headers['X-PlayToken'] || headers['x-playtoken'],
-    )}`;
+  // MX Player supports headers via S.headers extra, separated by \r\n
+  const headerStrings = [];
+  Object.keys(headers).forEach(key => {
+    headerStrings.push(`${key}:${headers[key]}`);
+  });
+
+  if (headerStrings.length > 0) {
+    const headersValue = headerStrings.join('\r\n');
+    intent += `;S.headers=${encodeURIComponent(headersValue)}`;
   }
 
-  return `intent:${encodedUrl}#Intent;type=video/*;package=com.mxtech.videoplayer.ad${intentExtras};end`;
+  intent += ';end';
+  console.log(`[ExternalPlayer] Final MX Player Intent: ${intent}`);
+  return intent;
 }
 
 /**
  * Generate Just Player intent URL
- * Just Player supports simple video/* intents
- * Headers can be passed via intent extras
  */
 function generateJustPlayerUrl(videoUrl, title = '', headers = {}) {
-  // Just Player can handle simple video URLs via intent
-  const encodedUrl = encodeURIComponent(videoUrl);
-
-  let intentExtras = '';
-
-  // Add Referer as extra
-  if (headers.Referer) {
-    intentExtras += `;android.intent.extra.REFERRER=${encodeURIComponent(
-      headers.Referer,
-    )}`;
+  // Similar to MX Player format
+  let scheme = 'http';
+  let rest = videoUrl;
+  
+  if (videoUrl.includes('://')) {
+    const parts = videoUrl.split('://');
+    scheme = parts[0];
+    rest = parts[1];
+  } else if (videoUrl.startsWith('/')) {
+    scheme = 'file';
+    rest = videoUrl;
   }
 
-  // Add headers as custom extra (Just Player may pass them through)
-  if (headers['X-PlayToken'] || headers['x-playtoken']) {
-    intentExtras += `;X-PlayToken=${encodeURIComponent(
-      headers['X-PlayToken'] || headers['x-playtoken'],
-    )}`;
+  // Ensure rest doesn't start with // if we are prepending //
+  const normalizedRest = rest.startsWith('//') ? rest.substring(2) : rest;
+  let intent = `intent://${normalizedRest}#Intent;scheme=${scheme};action=android.intent.action.VIEW;package=com.brouken.player`;
+  
+  if (title) {
+    intent += `;S.title=${encodeURIComponent(title)}`;
+  }
+  
+  const headerStrings = [];
+  Object.keys(headers).forEach(key => {
+    headerStrings.push(`${key}:${headers[key]}`);
+  });
+  
+  if (headerStrings.length > 0) {
+    const headersValue = headerStrings.join('\r\n');
+    intent += `;S.headers=${encodeURIComponent(headersValue)}`;
   }
 
-  return `intent:${encodedUrl}#Intent;type=video/*;package=com.brouken.player${intentExtras};end`;
+  intent += ';end';
+  console.log(`[ExternalPlayer] Final Just Player Intent: ${intent}`);
+  return intent;
 }
 
 /**
@@ -196,24 +175,19 @@ export function generatePlayerUrl(
   title = '',
   headers = {},
 ) {
-  switch (playerId.toLowerCase()) {
-    case 'vlc':
-      return generateVLCUrl(videoUrl, title, headers);
-    case 'mxplayer':
-      return generateMXPlayerUrl(videoUrl, title, headers);
-    case 'justplayer':
-      return generateJustPlayerUrl(videoUrl, title, headers);
-    default:
-      return videoUrl;
+  const pid = playerId.toLowerCase();
+  if (pid === 'vlc') {
+    return generateVLCUrl(videoUrl, title, headers);
+  } else if (pid === 'mxplayer') {
+    return generateMXPlayerUrl(videoUrl, title, headers);
+  } else if (pid === 'justplayer') {
+    return generateJustPlayerUrl(videoUrl, title, headers);
   }
+  return videoUrl;
 }
 
 /**
  * Launch external player with the given URL
- * @param {string} playerId - ID of the player to launch
- * @param {string} videoUrl - Video URL to play
- * @param {string} title - Optional video title
- * @param {object} headers - Optional headers (note: external players may not support these)
  */
 export async function launchExternalPlayer(
   playerId,
@@ -232,49 +206,28 @@ export async function launchExternalPlayer(
       throw new Error(`Player ${playerId} is not an external player`);
     }
 
-    console.log(
-      `[ExternalPlayer] Launching ${player.name} with URL: ${videoUrl}`,
-    );
-    console.log(`[ExternalPlayer] Headers:`, headers);
-
-    // Generate player-specific URL with headers
+    // Generate player-specific URL
     const playerUrl = generatePlayerUrl(playerId, videoUrl, title, headers);
 
-    // Check if the URL can be opened first (more reliable on Android)
-    const canOpen = await Linking.canOpenURL(playerUrl);
+    console.log(`[ExternalPlayer] Attempting to launch ${player.name}`);
+    console.log(`[ExternalPlayer] Target URL: ${playerUrl}`);
 
-    if (!canOpen) {
-      console.log(
-        `[ExternalPlayer] Player URL cannot be opened, suggesting install`,
-      );
-      return {
-        success: false,
-        error: 'Player not installed',
-        notInstalled: true,
-        player: player.name,
-        packageName: player.packageName,
-      };
-    }
-
-    // For VLC, we can use the URL scheme directly
-    if (playerId.toLowerCase() === 'vlc') {
-      await Linking.openURL(playerUrl);
-      return { success: true, player: player.name };
-    }
-
-    // For other players using intents
+    // We skip Linking.canOpenURL as it is unreliable for intent:// URLs on Android
+    // Instead we try to open and catch the "Activity not found" error
     try {
       await Linking.openURL(playerUrl);
       return { success: true, player: player.name };
-    } catch (intentError) {
-      console.log(`[ExternalPlayer] Intent failed: ${intentError}`);
+    } catch (launchError) {
+      console.log(`[ExternalPlayer] Launch failed: ${launchError.message}`);
 
-      // Check if we should suggest installation
+      // Check if the error indicates the app is not installed
+      const errorMsg = launchError.message || '';
       if (
-        intentError.message?.includes('not found') ||
-        intentError.message?.includes('No Activity found') ||
-        intentError.message?.includes('unable to parse')
+        errorMsg.includes('No Activity found') || 
+        errorMsg.includes('not found') ||
+        errorMsg.includes('unable to parse')
       ) {
+        console.log(`[ExternalPlayer] Player ${player.name} not found, requesting install`);
         return {
           success: false,
           error: 'Player not installed',
@@ -284,24 +237,29 @@ export async function launchExternalPlayer(
         };
       }
 
-      // Fallback: try opening the video URL directly
-      await Linking.openURL(videoUrl);
-      return { success: true, player: player.name, fallback: true };
+      // Fallback: try opening the video URL directly if intent failed for other reasons
+      console.log(`[ExternalPlayer] Attempting fallback to direct URL`);
+      try {
+        await Linking.openURL(videoUrl);
+        return { success: true, player: player.name, fallback: true };
+      } catch (fallbackError) {
+        throw launchError; // Throw original error if fallback also fails
+      }
     }
   } catch (error) {
-    console.error(`[ExternalPlayer] Error launching player: ${error}`);
+    console.error(`[ExternalPlayer] Error in launchExternalPlayer: ${error}`);
 
-    // Check if this is a "not installed" error
+    const errorMsg = error.message || '';
     const isNotInstalled =
-      error.message?.includes('not found') ||
-      error.message?.includes('No Activity found') ||
-      error.message?.includes('unable to parse');
+      errorMsg.includes('No Activity found') ||
+      errorMsg.includes('not found') ||
+      errorMsg.includes('unable to parse');
 
     return {
       success: false,
       error: error.message,
       notInstalled: isNotInstalled,
-      suggestion: 'Player may not be installed',
+      player: playerId,
     };
   }
 }
@@ -397,11 +355,11 @@ export async function handlePlayerLaunch(
     return { success: true, useExternal: false };
   }
 
-  // Check if player is installed
+  // Check if player is installed (now returns true by default to allow attempt)
   const status = await getPlayerStatus(playerId);
 
   if (!status.available) {
-    // Player not installed, trigger install flow
+    // If we somehow know it's not installed before attempting
     if (onNotInstalled) {
       onNotInstalled(player);
     }
@@ -410,6 +368,12 @@ export async function handlePlayerLaunch(
 
   // Launch the player
   const result = await launchExternalPlayer(playerId, videoUrl, title, headers);
+
+  // If launch reported "not installed", trigger the callback
+  if (result.notInstalled && onNotInstalled) {
+    console.log(`[ExternalPlayer] Launch result reported NOT INSTALLED, triggering callback`);
+    onNotInstalled(player);
+  }
 
   return {
     success: result.success,
