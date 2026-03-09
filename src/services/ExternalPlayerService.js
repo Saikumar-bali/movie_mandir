@@ -14,6 +14,7 @@ export const EXTERNAL_PLAYERS = [
     isExternal: false,
     packageName: null,
     urlScheme: null,
+    logo: require('../assets/logo.png'),
   },
   {
     id: 'vlc',
@@ -26,6 +27,7 @@ export const EXTERNAL_PLAYERS = [
     isExternal: true,
     playStoreUrl: 'market://details?id=org.videolan.vlc',
     webUrl: 'https://play.google.com/store/apps/details?id=org.videolan.vlc',
+    logo: require('../assets/vlc.png'),
   },
   {
     id: 'mxplayer',
@@ -39,6 +41,7 @@ export const EXTERNAL_PLAYERS = [
     playStoreUrl: 'market://details?id=com.mxtech.videoplayer.ad',
     webUrl:
       'https://play.google.com/store/apps/details?id=com.mxtech.videoplayer.ad',
+    logo: require('../assets/mxplayer.png'),
   },
   {
     id: 'justplayer',
@@ -51,6 +54,7 @@ export const EXTERNAL_PLAYERS = [
     isExternal: true,
     playStoreUrl: 'market://details?id=com.brouken.player',
     webUrl: 'https://play.google.com/store/apps/details?id=com.brouken.player',
+    logo: require('../assets/justplayer.png'),
   },
 ];
 

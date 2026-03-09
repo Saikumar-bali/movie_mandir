@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
@@ -119,11 +120,19 @@ const PlayerSelectionDialog = ({
         activeOpacity={0.7}
       >
         <View style={[styles.playerIconContainer, { backgroundColor: player.color + '20' }]}>
-          <Icon
-            name={player.icon}
-            size={28}
-            color={player.color}
-          />
+          {player.logo ? (
+            <Image 
+              source={player.logo} 
+              style={styles.playerLogo}
+              resizeMode="contain"
+            />
+          ) : (
+            <Icon
+              name={player.icon}
+              size={28}
+              color={player.color}
+            />
+          )}
         </View>
 
         <View style={styles.playerInfo}>
@@ -289,9 +298,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#00b894',
   },
-  uninstalledItem: {
-    opacity: 0.6,
-  },
   playerIconContainer: {
     width: 50,
     height: 50,
@@ -299,6 +305,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  playerLogo: {
+    width: 32,
+    height: 32,
   },
   playerInfo: {
     flex: 1,
@@ -316,11 +327,6 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 2,
   },
-  notInstalledText: {
-    fontSize: 12,
-    color: '#ff375f',
-    marginTop: 4,
-  },
   defaultBadge: {
     fontSize: 11,
     color: '#00b894',
@@ -329,20 +335,6 @@ const styles = StyleSheet.create({
   },
   playerAction: {
     alignItems: 'flex-end',
-  },
-  installButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ff375f20',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  installButtonText: {
-    color: '#ff375f',
-    fontSize: 13,
-    fontWeight: '600',
   },
   optionsContainer: {
     paddingHorizontal: 20,
