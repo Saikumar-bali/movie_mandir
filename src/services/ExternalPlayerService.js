@@ -56,32 +56,18 @@ export const EXTERNAL_PLAYERS = [
 
 /**
  * Check if a package is installed (Android only)
- * Uses the player's own intent scheme to check if it can be resolved
+ * Note: Due to Android security restrictions, reliably detecting installed apps
+ * via Linking.canOpenURL is not possible. We instead try to launch and catch errors.
+ * This function now always returns true for external players to allow attempting launch.
  */
 export async function isAppInstalled(packageName) {
   if (Platform.OS !== 'android' || !packageName) {
     return false;
   }
 
-  try {
-    // Use a simple video intent to check if the package can handle it
-    // This is more reliable than checking Play Store
-    const intentUrl = `intent://video.test#Intent;package=${packageName};type=video/*;end`;
-    const canOpen = await Linking.canOpenURL(intentUrl);
-
-    if (!canOpen) {
-      // Try alternative: check if package can open generic video intent
-      const altIntentUrl = `intent://#Intent;package=${packageName};type=video/*;end`;
-      return await Linking.canOpenURL(altIntentUrl);
-    }
-
-    return canOpen;
-  } catch (error) {
-    console.log(
-      `[ExternalPlayer] Error checking if app is installed: ${error}`,
-    );
-    return false;
-  }
+  // Return true to allow attempting launch - we'll handle "not installed" case when launching
+  // This is more reliable than canOpenURL which doesn't work well with intent URLs
+  return true;
 }
 
 /**
@@ -254,6 +240,22 @@ export async function launchExternalPlayer(
     // Generate player-specific URL with headers
     const playerUrl = generatePlayerUrl(playerId, videoUrl, title, headers);
 
+    // Check if the URL can be opened first (more reliable on Android)
+    const canOpen = await Linking.canOpenURL(playerUrl);
+
+    if (!canOpen) {
+      console.log(
+        `[ExternalPlayer] Player URL cannot be opened, suggesting install`,
+      );
+      return {
+        success: false,
+        error: 'Player not installed',
+        notInstalled: true,
+        player: player.name,
+        packageName: player.packageName,
+      };
+    }
+
     // For VLC, we can use the URL scheme directly
     if (playerId.toLowerCase() === 'vlc') {
       await Linking.openURL(playerUrl);
@@ -265,9 +267,22 @@ export async function launchExternalPlayer(
       await Linking.openURL(playerUrl);
       return { success: true, player: player.name };
     } catch (intentError) {
-      console.log(
-        `[ExternalPlayer] Intent failed, trying fallback: ${intentError}`,
-      );
+      console.log(`[ExternalPlayer] Intent failed: ${intentError}`);
+
+      // Check if we should suggest installation
+      if (
+        intentError.message?.includes('not found') ||
+        intentError.message?.includes('No Activity found') ||
+        intentError.message?.includes('unable to parse')
+      ) {
+        return {
+          success: false,
+          error: 'Player not installed',
+          notInstalled: true,
+          player: player.name,
+          packageName: player.packageName,
+        };
+      }
 
       // Fallback: try opening the video URL directly
       await Linking.openURL(videoUrl);
@@ -275,9 +290,17 @@ export async function launchExternalPlayer(
     }
   } catch (error) {
     console.error(`[ExternalPlayer] Error launching player: ${error}`);
+
+    // Check if this is a "not installed" error
+    const isNotInstalled =
+      error.message?.includes('not found') ||
+      error.message?.includes('No Activity found') ||
+      error.message?.includes('unable to parse');
+
     return {
       success: false,
       error: error.message,
+      notInstalled: isNotInstalled,
       suggestion: 'Player may not be installed',
     };
   }
