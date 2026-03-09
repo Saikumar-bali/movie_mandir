@@ -64,18 +64,16 @@ export async function isAppInstalled(packageName) {
   }
   
   try {
-    // IntentLauncher doesn't have a direct check, but we can use Linking.canOpenURL
-    // since we added <queries> to AndroidManifest.xml
-    return await Linking.canOpenURL(`package:${packageName}`);
+    // We use the patched IntentLauncher's isAppInstalled method
+    return await IntentLauncher.isAppInstalled(packageName);
   } catch (e) {
-    // Fallback: we'll handle failure during launch
-    return true; 
+    // Fallback: If the method fails or app not found, return false
+    return false; 
   }
 }
 
 /**
  * Generate player-specific URL (Legacy/Compatibility)
- * Now simply returns the video URL as the Intent logic is handled in launchExternalPlayer
  */
 export function generatePlayerUrl(playerId, videoUrl, title = '', headers = {}) {
   return videoUrl;
@@ -125,12 +123,12 @@ export async function launchExternalPlayer(
     }
 
     try {
-      // Launch using IntentLauncher with explicit package
+      // Launch using patched IntentLauncher with explicit packageName
       await IntentLauncher.startActivity({
         action: 'android.intent.action.VIEW',
         data: videoUrl,
         type: 'video/*',
-        package: player.packageName,
+        packageName: player.packageName, // Matches patched IntentLauncherModule.java
         extra: extras,
       });
 
@@ -138,11 +136,11 @@ export async function launchExternalPlayer(
     } catch (launchError) {
       console.log(`[ExternalPlayer] Specific package launch failed: ${launchError.message}`);
       
-      // If explicit package fails, it's likely not installed
+      // If launch fails, it's likely not installed or another issue
       return {
         success: false,
-        error: 'Player not installed',
-        notInstalled: true,
+        error: 'Player launch failed',
+        notInstalled: true, // We assume not installed to trigger the prompt
         player: player.name,
         packageName: player.packageName,
       };
@@ -198,6 +196,14 @@ export async function handlePlayerLaunch(
 
   if (!player) return { success: false, error: 'Unknown player' };
   if (!player.isExternal) return { success: true, useExternal: false };
+
+  // Check if player is installed first
+  const installed = await isAppInstalled(player.packageName);
+  
+  if (!installed && onNotInstalled) {
+    onNotInstalled(player);
+    return { success: false, notInstalled: true, player };
+  }
 
   const result = await launchExternalPlayer(playerId, videoUrl, title, headers);
 
